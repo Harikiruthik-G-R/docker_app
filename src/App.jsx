@@ -35,7 +35,7 @@ function App() {
         </div>
         <div className="subtitle">
           <span className="bracket">{'{ '}</span>
-          <span className="name">HARIKIRUTHIK GR</span>
+          <span className="name">HARIKIRUTHIK G</span>
           <span className="bracket">{' }'}</span>
         </div>
         <p className="tagline">Container orchestration reimagined</p>
