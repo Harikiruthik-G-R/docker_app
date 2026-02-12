@@ -9,6 +9,7 @@ function App() {
     setTimeout(() => setIsVisible(true), 100)
   }, [])
 
+  
   const dockerConcepts = [
     { icon: '📦', title: 'Containers', desc: 'Isolated execution environments that run anywhere' },
     { icon: '🎯', title: 'Images', desc: 'Immutable snapshots of your application stack' },
