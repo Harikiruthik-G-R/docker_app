@@ -1,53 +1,70 @@
-name: Deploy to EC2
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
 
 jobs:
-  deploy:
+
+  # -------------------------
+  # 1️⃣ Security Job
+  # -------------------------
+  security:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout Repository
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # Step 2: Login to DockerHub
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-    # Step 3: Validate Image Pull (Optional Safety Check)
-    - name: Pull Docker Image
-      run: docker pull harikiruthik/myapp:latest
+      - run: npm install
+      - run: npm audit --audit-level=high
+      - run: npm run build
 
-    # Step 4: SSH into EC2 and Deploy
-    - name: SSH and Deploy
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
-        script: |
-          echo "Stopping existing container..."
-          sudo docker stop myapp || true
-          
-          echo "Removing old container..."
-          sudo docker rm myapp || true
-          
-          echo "Pulling latest image..."
-          sudo docker pull harikiruthik/myapp:latest
-          
-          echo "Starting new container..."
-          sudo docker run -d \
-            -p 80:5173 \
-            --restart always \
-            --name myapp \
-            harikiruthik/myapp:latest
-          
-          echo "Deployment completed successfully!"
+  # -------------------------
+  # 2️⃣ Build & Push Job
+  # -------------------------
+  build:
+    needs: security   # 👈 Only runs if security succeeds
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Image
+        run: docker build -t harikiruthik/myapp:latest .
+
+      - name: Push Image
+        run: docker push harikiruthik/myapp:latest
+
+  # -------------------------
+  # 3️⃣ Deploy Job
+  # -------------------------
+  deploy:
+    needs: build   # 👈 Only runs if build succeeds
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo docker stop myapp || true
+            sudo docker rm myapp || true
+            sudo docker pull harikiruthik/myapp:latest
+            sudo docker run -d \
+              -p 80:5173 \
+              --restart always \
+              --name myapp \
+              harikiruthik/myapp:latest
