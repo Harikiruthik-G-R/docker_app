@@ -41,7 +41,7 @@ jobs:
           sudo docker rm myapp || true
           
           echo "Pulling latest image..."
-          sudo docker pull chandrulinesmasher/mysampleappv1:latest
+          sudo docker pull harikiruthik/myapp:latest
           
           echo "Starting new container..."
           sudo docker run -d \
